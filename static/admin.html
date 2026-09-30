@@ -1,0 +1,144 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#03100c"><meta name="robots" content="noindex,nofollow"><title>BytesMusic — Admin Panel</title><style>
+*{box-sizing:border-box}html,body{margin:0;background:#020907;color:#edf9f4;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}button,input{font:inherit}button{cursor:pointer}a{color:#18e6b2}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#03110d}::-webkit-scrollbar-thumb{background:#135444;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#12e7b0}
+.admin{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{background:#03110d;border-right:1px solid #12352d;padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.brand{display:flex;gap:14px;align-items:center;margin:8px 4px 30px}
+.mark{width:48px;height:48px;border:1px solid #12e7b0;border-radius:13px;display:grid;place-items:center;color:#12e7b0;font-weight:800;flex-shrink:0}
+.brand b{font-size:19px;letter-spacing:-.5px}
+.brand small{display:block;color:#6d8980;font:9px monospace;letter-spacing:2px;margin-top:4px}
+.nav{display:grid;gap:6px;flex:1}
+.nav button{border:0;background:transparent;color:#78958c;text-align:left;padding:14px 16px;border-radius:11px;font-size:15px;transition:all .2s;display:flex;align-items:center;gap:10px}
+.nav button span{font-size:15px}
+.nav button.active,.nav button:hover{background:#073229;color:#16e4b0}
+.backToApp{margin-top:auto;padding-top:20px;border-top:1px solid #12352d}
+.backToApp a{display:block;text-align:center;padding:12px;border:1px solid #185746;border-radius:10px;color:#b0c7bf;text-decoration:none;font-size:14px;transition:all .2s}
+.backToApp a:hover{background:#073229;color:#16e4b0}
+.content{min-width:0}
+.topbar{height:72px;border-bottom:1px solid #12352d;display:flex;align-items:center;gap:18px;padding:0 28px;position:sticky;top:0;background:#020907ee;backdrop-filter:blur(14px);z-index:5}
+.topbar h1{font-size:22px;margin:0;flex:1}
+.searchBox{flex:1;max-width:400px;border:1px solid #12483b;border-radius:12px;padding:10px 14px;background:#03150f;color:#eef;outline:none;transition:border-color .2s}
+.searchBox:focus{border-color:#12e7b0}
+.notif{display:flex;align-items:center;gap:8px;color:#6f9990;font-size:13px}
+.notif .dot{width:8px;height:8px;border-radius:50%;background:#12e7b0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.userBadge{border:1px solid #185746;border-radius:10px;padding:8px 14px;color:#b0c7bf;font-size:13px}
+.body{padding:28px}
+.page{display:none}.page.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.statGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-bottom:30px}
+.statCard{background:#03150f;border:1px solid #12352d;border-radius:16px;padding:24px;transition:all .2s}
+.statCard:hover{border-color:#135444;transform:translateY(-2px)}
+.statCard .icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;margin-bottom:14px}
+.statCard .val{font-size:32px;font-weight:800;letter-spacing:-1px}
+.statCard .lbl{color:#6f9990;font-size:13px;margin-top:6px}
+.statCard.green .icon{background:#073229;color:#12e7b0}
+.statCard.blue .icon{background:#0a2433;color:#4db8e0}
+.statCard.amber .icon{background:#332808;color:#e0b84d}
+.statCard.red .icon{background:#330a0a;color:#e06b6b}
+.statCard.purple .icon{background:#1a0a33;color:#b88de0}
+.statCard.teal .icon{background:#0a3328;color:#4de0b8}
+.sectionHead{display:flex;align-items:center;justify-content:space-between;margin:30px 0 16px}
+.sectionHead h2{font-size:20px;margin:0}
+.sectionHead .eyebrow{font:10px monospace;letter-spacing:3px;color:#709990}
+.tableWrap{background:#03150f;border:1px solid #12352d;border-radius:16px;overflow:hidden;margin-bottom:24px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:14px 18px;font:10px monospace;letter-spacing:2px;color:#709990;border-bottom:1px solid #12352d;text-transform:uppercase}
+td{padding:14px 18px;border-bottom:1px solid #0e3028;font-size:14px}
+tr:last-child td{border-bottom:0}
+tr:hover{background:#06251e}
+.thumb{width:40px;height:40px;object-fit:cover;border-radius:8px;background:#08251e}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.admin{background:#073229;color:#12e7b0}
+.badge.user{background:#1a2420;color:#78958c}
+.btnSm{border:1px solid #175442;background:transparent;color:#9bb8af;border-radius:8px;padding:6px 12px;font-size:12px;transition:all .2s}
+.btnSm:hover{background:#073229;color:#16e4b0}
+.btnSm.danger{border-color:#542424;color:#e06b6b}
+.btnSm.danger:hover{background:#330a0a;color:#ff8b9b}
+.empty{border:1px dashed #17483b;border-radius:16px;padding:55px;text-align:center;color:#668c82}
+.loginWrap{display:grid;place-items:center;min-height:100vh;background:#020907}
+.loginCard{width:min(440px,92vw);background:#032018;border:1px solid #155342;border-radius:20px;padding:36px;box-shadow:0 25px 80px #000}
+.loginCard h1{font-size:24px;margin:0 0 6px}
+.loginCard .eyebrow{font:10px monospace;letter-spacing:3px;color:#709990;margin-bottom:20px}
+.loginCard .field{width:100%;margin:9px 0;padding:15px;border:1px solid #185342;background:#02140f;color:#fff;border-radius:10px;outline:0;transition:border-color .2s}
+.loginCard .field:focus{border-color:#12e7b0}
+.loginCard .action{width:100%;margin-top:12px;padding:15px;border:0;border-radius:10px;background:#12dfaa;font-weight:800;transition:transform .15s}
+.loginCard .action:hover{transform:translateY(-1px)}
+.loginCard .msg{color:#ff8b9b;margin-top:10px;font-size:13px}
+.loginCard .back{display:block;text-align:center;margin-top:16px;color:#86a69e;text-decoration:none;font-size:14px;transition:color .2s}
+.loginCard .back:hover{color:#12e7b0}
+.chartWrap{background:#03150f;border:1px solid #12352d;border-radius:16px;padding:24px;margin-bottom:24px}
+.chartWrap h3{margin:0 0 16px;font-size:16px}
+.chart{display:flex;align-items:flex-end;gap:6px;height:160px}
+.chart .bar{flex:1;background:linear-gradient(180deg,#12e7b0,#073229);border-radius:6px 6px 0 0;min-height:4px;position:relative;transition:opacity .2s}
+.chart .bar:hover{opacity:.8}
+.chart .bar .tip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:10px monospace;color:#72a49a;white-space:nowrap;margin-bottom:4px}
+.twoCol{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:900px){.twoCol{grid-template-columns:1fr}}
+@media(max-width:768px){.admin{grid-template-columns:1fr}.sidebar{position:fixed;bottom:0;left:0;right:0;height:64px;border:0;border-top:1px solid #12352d;flex-direction:row;align-items:center;z-index:30;overflow-x:auto}.brand,.backToApp{display:none}.nav{flex-direction:row;flex:1}.nav button{padding:10px;font-size:0;justify-content:center}.nav button:first-letter{font-size:18px}.body{padding:16px}.topbar{padding:0 14px}.statGrid{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<!-- Login gate -->
+<div id="loginGate" class="loginWrap" style="display:none"><div class="loginCard"><div class="eyebrow">BytesMusic Admin</div><h1>Admin Sign In</h1><input id="loginUser" class="field" placeholder="username"><input id="loginPass" class="field" type="password" placeholder="password"><button class="action" onclick="adminLogin()">SIGN IN</button><div id="loginMsg" class="msg"></div><a class="back" href="/">← Back to BytesMusic</a></div></div>
+
+<!-- Admin panel -->
+<div id="adminPanel" class="admin" style="display:none"><aside class="sidebar"><div class="brand"><div class="mark">BM</div><div><b>BYTESMUSIC</b><small>ADMIN PANEL</small></div></div><nav class="nav"><button class="active" onclick="showPage('dashboard')">▦ <span>Dashboard</span></button><button onclick="showPage('users')">☻ <span>Users</span></button><button onclick="showPage('songs')">♪ <span>Songs</span></button><button onclick="showPage('history')">◷ <span>Activity</span></button><button onclick="showPage('likes')">♡ <span>Likes</span></button></nav><div class="backToApp"><a href="/">← Back to BytesMusic</a></div></aside><div class="content"><header class="topbar"><h1 id="pageTitle">Dashboard</h1><input id="adminSearch" class="searchBox" placeholder="Search…" oninput="adminFilter(this.value)"><div class="notif"><span class="dot"></span><span id="notifText">System Online</span></div><div class="userBadge" id="adminBadge">admin</div></header><div class="body">
+
+<!-- Dashboard -->
+<div id="page-dashboard" class="page active"><div class="statGrid" id="statGrid"></div><div class="chartWrap"><h3>Plays — Last 7 Days</h3><div class="chart" id="playsChart"></div></div><div class="twoCol"><div><div class="sectionHead"><div><div class="eyebrow">Trending</div><h2>Most Played</h2></div></div><div class="tableWrap"><table><thead><tr><th>#</th><th>Song</th><th>Artist</th><th>Plays</th></tr></thead><tbody id="mostPlayedBody"></tbody></table></div></div><div><div class="sectionHead"><div><div class="eyebrow">Popular</div><h2>Most Liked</h2></div></div><div class="tableWrap"><table><thead><tr><th>#</th><th>Song</th><th>Artist</th><th>Likes</th></tr></thead><tbody id="mostLikedBody"></tbody></table></div></div><div class="sectionHead"><div><div class="eyebrow">Recent Activity</div><h2>Recently Played</h2></div></div><div class="tableWrap"><table><thead><tr><th>Song</th><th>Artist</th><th>User</th><th>Time</th></tr></thead><tbody id="recentSongsBody"></tbody></table></div></div>
+
+<!-- Users -->
+<div id="page-users" class="page"><div class="sectionHead"><div><div class="eyebrow">Management</div><h2>All Users</h2></div></div><div class="tableWrap"><table><thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table></div></div>
+
+<!-- Songs -->
+<div id="page-songs" class="page"><div class="sectionHead"><div><div class="eyebrow">Catalog</div><h2>Unique Songs (from plays & likes)</h2></div></div><div class="tableWrap"><table><thead><tr><th>Video ID</th><th>Title</th><th>Artist</th><th>Plays</th><th>Likes</th></tr></thead><tbody id="songsBody"></tbody></table></div></div>
+
+<!-- Activity -->
+<div id="page-history" class="page"><div class="sectionHead"><div><div class="eyebrow">Log</div><h2>Play History</h2></div></div><div class="tableWrap"><table><thead><tr><th>Song</th><th>Artist</th><th>User</th><th>Time</th></tr></thead><tbody id="historyBody"></tbody></table></div></div>
+
+<!-- Likes -->
+<div id="page-likes" class="page"><div class="sectionHead"><div><div class="eyebrow">Engagement</div><h2>All Likes</h2></div></div><div class="tableWrap"><table><thead><tr><th>Song</th><th>Artist</th><th>User</th><th>Time</th></tr></thead><tbody id="likesBody"></tbody></table></div></div>
+
+</div></div></div>
+
+<script>
+let token=localStorage.getItem('bytesmusic_token')||'';const $=id=>document.getElementById(id);let statsData={};let allUsers=[];let allHistory=[];let allLikes=[];let allSongs=[];
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmtTime(t){if(!t)return'—';return t.replace('T',' ').substring(0,16)}
+
+async function adminLogin(){let u=$('loginUser').value.trim(),p=$('loginPass').value;if(!u||!p)return;$('loginMsg').textContent='';try{let r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});let d=await r.json();if(!r.ok)return $('loginMsg').textContent=d.error||'Login failed';if(!d.is_admin)return $('loginMsg').textContent='This account does not have admin access.';token=d.token;localStorage.setItem('bytesmusic_token',token);init()}catch(e){$('loginMsg').textContent='Network error'}}
+
+async function init(){if(!token){$('loginGate').style.display='grid';return}let r=await fetch('/api/auth/me',{headers:{Authorization:'Bearer '+token}});let d=await r.json();if(!d.user||!d.user.is_admin){token='';localStorage.removeItem('bytesmusic_token');$('loginGate').style.display='grid';return}$('loginGate').style.display='none';$('adminPanel').style.display='grid';$('adminBadge').textContent=d.user.username;await loadDashboard();await loadUsers();await loadHistory();await loadLikes()}
+
+async function loadDashboard(){try{let r=await fetch('/api/admin/stats',{headers:{Authorization:'Bearer '+token}});let d=await r.json();if(!r.ok)throw Error(d.error);statsData=d;renderStats();renderCharts();renderMostPlayed();renderMostLiked();renderRecentSongs()}catch(e){console.error(e)}}
+
+function renderStats(){let s=statsData;let cards=[{cls:'green',icon:'♪',val:s.total_songs||0,lbl:'Unique Songs'},{cls:'blue',icon:'☻',val:s.total_users||0,lbl:'Total Users'},{cls:'amber',icon:'▶',val:s.total_plays||0,lbl:'Total Plays'},{cls:'red',icon:'♡',val:s.total_likes||0,lbl:'Total Likes'},{cls:'purple',icon:'♫',val:s.total_artists||0,lbl:'Unique Artists'},{cls:'teal',icon:'☰',val:s.total_playlists||0,lbl:'Playlists'}];$('statGrid').innerHTML=cards.map(c=>`<div class="statCard ${c.cls}"><div class="icon">${c.icon}</div><div class="val">${c.val}</div><div class="lbl">${c.lbl}</div></div>`).join('')}
+
+function renderCharts(){let days=statsData.plays_by_day||[];let max=Math.max(1,...days.map(d=>d.plays));$('playsChart').innerHTML=days.length?days.map(d=>`<div class="bar" style="height:${Math.round(d.plays/max*100)}%"><div class="tip">${d.date}: ${d.plays}</div></div>`).join(''):'<div style="color:#668c82;padding:20px">No play data for the last 7 days.</div>'}
+
+function renderMostPlayed(){let rows=statsData.most_played||[];$('mostPlayedBody').innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td style="display:flex;align-items:center;gap:10px"><img class="thumb" src="${r.thumbnail||''}" onerror="this.style.display='none'"><span>${esc(r.title)}</span></td><td>${esc(r.artist)}</td><td>${r.plays}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#668c82;text-align:center;padding:30px">No play data yet.</td></tr>'}
+
+function renderMostLiked(){let rows=statsData.most_liked||[];$('mostLikedBody').innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}</td><td style="display:flex;align-items:center;gap:10px"><img class="thumb" src="${r.thumbnail||''}" onerror="this.style.display='none'"><span>${esc(r.title)}</span></td><td>${esc(r.artist)}</td><td>${r.likes}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#668c82;text-align:center;padding:30px">No like data yet.</td></tr>'}
+
+function renderRecentSongs(){let rows=statsData.recent_songs||[];$('recentSongsBody').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(r.title)}</td><td>${esc(r.artist)}</td><td>—</td><td>${fmtTime(r.created_at)}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#668c82;text-align:center;padding:30px">No recent activity.</td></tr>'}
+
+async function loadUsers(){try{let r=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+token}});let d=await r.json();if(!r.ok)throw Error(d.error);allUsers=d.users||[];renderUsers()}catch(e){console.error(e)}}
+function renderUsers(filter=''){$('usersBody').innerHTML=allUsers.length?allUsers.filter(u=>!filter||u.username.toLowerCase().includes(filter.toLowerCase())).map(u=>`<tr><td>${u.id}</td><td>${esc(u.username)}</td><td><span class="badge ${u.is_admin?'admin':'user'}">${u.is_admin?'Admin':'User'}</span></td><td>${fmtTime(u.created_at)}</td><td><button class="btnSm" onclick="toggleAdmin(${u.id})">${u.is_admin?'Remove Admin':'Make Admin'}</button> <button class="btnSm danger" onclick="deleteUser(${u.id})">Delete</button></td></tr>`).join(''):'<tr><td colspan="5" style="color:#668c82;text-align:center;padding:30px">No users found.</td></tr>'}
+
+async function toggleAdmin(id){if(!confirm('Change admin status for this user?'))return;try{let r=await fetch('/api/admin/users/toggle-admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({userId:id})});let d=await r.json();if(!r.ok)throw Error(d.error);await loadUsers()}catch(e){alert(e.message)}}
+async function deleteUser(id){if(!confirm('Permanently delete this user and all their data?'))return;try{let r=await fetch('/api/admin/users/delete',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({userId:id})});let d=await r.json();if(!r.ok)throw Error(d.error);await loadUsers();await loadDashboard()}catch(e){alert(e.message)}}
+
+async function loadHistory(){try{let r=await fetch('/api/admin/history',{headers:{Authorization:'Bearer '+token}});let d=await r.json();if(!r.ok)throw Error(d.error);allHistory=d.history||[];renderHistory();buildSongs()}catch(e){console.error(e)}}
+function renderHistory(filter=''){$('historyBody').innerHTML=allHistory.length?allHistory.filter(h=>!filter||(h.title||'').toLowerCase().includes(filter.toLowerCase())||(h.username||'').toLowerCase().includes(filter.toLowerCase())).slice(0,200).map(h=>`<tr><td>${esc(h.title)}</td><td>${esc(h.artist)}</td><td>${esc(h.username||'—')}</td><td>${fmtTime(h.created_at)}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#668c82;text-align:center;padding:30px">No activity recorded.</td></tr>'}
+
+async function loadLikes(){try{let r=await fetch('/api/admin/likes',{headers:{Authorization:'Bearer '+token}});let d=await r.json();if(!r.ok)throw Error(d.error);allLikes=d.likes||[];renderLikes();buildSongs()}catch(e){console.error(e)}}
+function renderLikes(filter=''){$('likesBody').innerHTML=allLikes.length?allLikes.filter(l=>!filter||(l.title||'').toLowerCase().includes(filter.toLowerCase())||(l.username||'').toLowerCase().includes(filter.toLowerCase())).slice(0,200).map(l=>`<tr><td>${esc(l.title)}</td><td>${esc(l.artist)}</td><td>${esc(l.username||'—')}</td><td>${fmtTime(l.created_at)}</td></tr>`).join(''):'<tr><td colspan="4" style="color:#668c82;text-align:center;padding:30px">No likes recorded.</td></tr>'}
+
+function buildSongs(){let map={};allHistory.forEach(h=>{let k=h.video_id;if(!map[k])map[k]={video_id:k,title:h.title,artist:h.artist,thumbnail:h.thumbnail,plays:0,likes:0};map[k].plays++});allLikes.forEach(l=>{let k=l.video_id;if(!map[k])map[k]={video_id:k,title:l.title,artist:l.artist,thumbnail:l.thumbnail,plays:0,likes:0};map[k].likes++});allSongs=Object.values(map).sort((a,b)=>(b.plays+b.likes)-(a.plays+a.likes));renderSongs()}
+function renderSongs(filter=''){$('songsBody').innerHTML=allSongs.length?allSongs.filter(s=>!filter||(s.title||'').toLowerCase().includes(filter.toLowerCase())||(s.artist||'').toLowerCase().includes(filter.toLowerCase())).slice(0,200).map(s=>`<tr><td style="font-family:monospace;font-size:12px">${esc(s.video_id)}</td><td style="display:flex;align-items:center;gap:10px"><img class="thumb" src="${s.thumbnail||''}" onerror="this.style.display='none'"><span>${esc(s.title)}</span></td><td>${esc(s.artist)}</td><td>${s.plays}</td><td>${s.likes}</td></tr>`).join(''):'<tr><td colspan="5" style="color:#668c82;text-align:center;padding:30px">No songs in catalog.</td></tr>'}
+
+function showPage(name){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));$('page-'+name).classList.add('active');let titles={dashboard:'Dashboard',users:'Users',songs:'Songs',history:'Activity',likes:'Likes'};$('pageTitle').textContent=titles[name]||'Dashboard';document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));event.currentTarget.classList.add('active')}
+
+function adminFilter(v){let page=document.querySelector('.page.active').id;if(page==='page-users')renderUsers(v);else if(page==='page-history')renderHistory(v);else if(page==='page-likes')renderLikes(v);else if(page==='page-songs')renderSongs(v)}
+
+init();
+</script></body></html>

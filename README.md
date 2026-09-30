@@ -1,25 +1,25 @@
-# 🎧 OpenTune
+# BytesMusic
 
 ### A YouTube Music-style open-source music player — without the clutter.
 
-**OpenTune** is an open-source web music client built by **[@harshitethic](https://github.com/harshitethic)**.
+**BytesMusic** is an open-source web music client built by **[@harshitethic](https://github.com/harshitethic)**.
 
-It is designed to feel familiar to YouTube Music while using a custom **OpenTune / @harshitethic** interface: dark, minimal, fast, and focused on listening.
+It is designed to feel familiar to YouTube Music while using a custom **BytesMusic / @harshitethic** interface: dark, minimal, fast, and focused on listening.
 
 > **Search music. Play it. Build a queue. Keep your history. Discover more.**
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎵 Music discovery
+### Music discovery
 - Search the public YouTube Music catalog
 - Search by songs, artists, albums and videos
 - Supports international music, including Hindi, Punjabi, Tamil, Telugu, English, and more
 - Uses the open-source [`ytmusicapi`](https://github.com/sigma67/ytmusicapi) project
 - No Google Cloud API key required
 
-### ▶️ Playback
+### Playback
 - YouTube's official embedded player
 - Play songs directly from search results
 - Previous / next controls
@@ -29,19 +29,19 @@ It is designed to feel familiar to YouTube Music while using a custom **OpenTune
 - Repeat
 - Up Next queue
 
-### 🧠 Discovery & recommendations
+### Discovery & recommendations
 - Recommendation section
 - Queue-based listening
 - Recently played history
-- Personalized recommendations when an OpenTune account is enabled
+- Personalized recommendations when a BytesMusic account is enabled
 
-### ❤️ Personal library
+### Personal library
 - Like songs
 - Listening history
 - Queue
 - Optional account system
 
-### 👤 Simple OpenTune accounts
+### Simple BytesMusic accounts
 
 Accounts are completely optional.
 
@@ -58,19 +58,30 @@ Password recovery uses the recovery answer.
 
 There is intentionally:
 
-- ❌ No Google OAuth
-- ❌ No email verification
-- ❌ No phone verification
-- ❌ No QR authentication
-- ❌ No API key required
+- No Google OAuth
+- No email verification
+- No phone verification
+- No QR authentication
+- No API key required
 
-This is a simple local account system intended for the OpenTune project.
+This is a simple local account system intended for the BytesMusic project.
+
+### Admin Panel
+
+BytesMusic includes a built-in admin panel accessible at `/admin`.
+
+- The first registered user automatically becomes the admin
+- Admins can view dashboard statistics (total songs, users, plays, likes, artists, playlists)
+- View and manage all users (promote/demote admin, delete users)
+- Browse all play history and likes across the platform
+- See most played and most liked songs, trending charts, and recent activity
+- The admin panel is hidden from normal users — only admin accounts see the link
 
 ---
 
-## 🎨 Design
+## Design
 
-OpenTune is styled around the **@harshitethic** portfolio aesthetic:
+BytesMusic is styled around the **@harshitethic** portfolio aesthetic:
 
 - Deep green / black interface
 - Neon mint accents
@@ -80,42 +91,17 @@ OpenTune is styled around the **@harshitethic** portfolio aesthetic:
 
 ---
 
-## 🖥️ Screenshots
-
-### Home
-![OpenTune home](docs/opentune-1.png)
-
-### Search & playback
-![OpenTune search and playback](docs/opentune-2.png)
-
-### Queue & Up Next
-![OpenTune queue](docs/opentune-3.png)
-
-### Sign in
-![OpenTune sign in](docs/opentune-4.png)
-
-### Create account
-![OpenTune create account](docs/opentune-5.png)
-
-### Mobile / responsive UI
-![OpenTune mobile](docs/opentune-6.png)
-
-### Project in development
-![OpenTune development](docs/opentune-7.png)
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```text
 ┌──────────────────────────────┐
-│          OpenTune UI         │
+│       BytesMusic UI          │
 │      HTML / CSS / JS         │
 └──────────────┬───────────────┘
                │
                ▼
 ┌──────────────────────────────┐
-│        OpenTune Server       │
+│      BytesMusic Server       │
 │          Python              │
 └──────────────┬───────────────┘
                │
@@ -125,7 +111,8 @@ OpenTune is styled around the **@harshitethic** portfolio aesthetic:
 │  ytmusicapi  │ │   SQLite     │
 │ Music search │ │ Accounts /   │
 │              │ │ History /    │
-│              │ │ Likes        │
+│              │ │ Likes /      │
+│              │ │ Admin        │
 └──────┬───────┘ └──────────────┘
        │
        ▼
@@ -135,11 +122,11 @@ OpenTune is styled around the **@harshitethic** portfolio aesthetic:
 └──────────────────────────────┘
 ```
 
-OpenTune does **not** download, extract, or re-host YouTube audio.
+BytesMusic does **not** download, extract, or re-host YouTube audio.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Requirements
 
@@ -150,8 +137,8 @@ OpenTune does **not** download, extract, or re-host YouTube audio.
 ### 1. Clone
 
 ```bash
-git clone https://github.com/harshitethic/OpenTune.git
-cd OpenTune
+git clone https://github.com/harshitethic/BytesMusic.git
+cd BytesMusic
 ```
 
 ### 2. Install dependencies
@@ -168,7 +155,7 @@ macOS / Linux:
 python3 -m pip install -r requirements.txt
 ```
 
-### 3. Start OpenTune
+### 3. Start BytesMusic
 
 Windows:
 
@@ -188,40 +175,49 @@ python3 app.py
 http://localhost:8000
 ```
 
----
+### 5. Admin Panel
 
-## 📁 Project Structure
+The first account you create automatically becomes the admin. After signing in, visit:
 
 ```text
-OpenTune/
+http://localhost:8000/admin
+```
+
+---
+
+## Project Structure
+
+```text
+BytesMusic/
 ├── static/
-│   └── index.html
+│   ├── index.html
+│   └── admin.html
 ├── tests/
 │   └── test_app.py
 ├── .github/
 │   └── workflows/
 │       └── tests.yml
 ├── docs/
-│   ├── opentune-1.png
-│   ├── opentune-2.png
-│   ├── opentune-3.png
-│   ├── opentune-4.png
-│   ├── opentune-5.png
-│   ├── opentune-6.png
-│   └── opentune-7.png
+│   ├── bytesmusic-1.png
+│   ├── bytesmusic-2.png
+│   ├── bytesmusic-3.png
+│   ├── bytesmusic-4.png
+│   ├── bytesmusic-5.png
+│   ├── bytesmusic-6.png
+│   └── bytesmusic-7.png
 ├── app.py
 ├── requirements.txt
 ├── README.md
 └── LICENSE
 ```
 
-`opentune.db` is generated locally at runtime and should not be committed.
+`bytesmusic.db` is generated locally at runtime and should not be committed.
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
-OpenTune is designed to run without paid APIs.
+BytesMusic is designed to run without paid APIs.
 
 There is no Google/YouTube API key required for the core music search.
 
@@ -229,11 +225,11 @@ The project uses the public functionality exposed through the open-source `ytmus
 
 ---
 
-## 🔐 Privacy & accounts
+## Privacy & accounts
 
-OpenTune does not require an account to search and listen.
+BytesMusic does not require an account to search and listen.
 
-If you create an OpenTune account, account-related data is used for features such as history, likes, recommendations, and password recovery.
+If you create a BytesMusic account, account-related data is used for features such as history, likes, recommendations, and password recovery.
 
 Do not use a password you use for important external accounts.
 
@@ -241,15 +237,15 @@ The built-in recovery-question system is intentionally simple and **should not b
 
 ---
 
-## ⚠️ Important
+## Important
 
-OpenTune is an independent open-source project.
+BytesMusic is an independent open-source project.
 
 It is **not affiliated with, endorsed by, or sponsored by YouTube or Google**.
 
 YouTube playback is provided through YouTube's official embedded player.
 
-OpenTune does not:
+BytesMusic does not:
 
 - Download YouTube audio
 - Re-host YouTube audio
@@ -260,7 +256,7 @@ Users are responsible for complying with the terms and laws applicable to the se
 
 ---
 
-## 🛠️ Roadmap
+## Roadmap
 
 - [ ] Better recommendation engine
 - [ ] Improved mobile experience
@@ -277,12 +273,12 @@ Users are responsible for complying with the terms and laws applicable to the se
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome.
 
 ```bash
-git fork https://github.com/harshitethic/OpenTune
+git fork https://github.com/harshitethic/BytesMusic
 ```
 
 Then:
@@ -310,7 +306,7 @@ Good first contributions include UI improvements, bug fixes, mobile responsivene
 
 ---
 
-## 🧪 Development
+## Development
 
 Run the server locally:
 
@@ -338,13 +334,13 @@ The same command is executed by GitHub Actions for every push and pull request.
 
 ---
 
-## 📜 License
+## License
 
 Released under the [MIT License](LICENSE).
 
 ---
 
-## 👨‍💻 Built by
+## Built by
 
 ### @harshitethic
 
@@ -353,19 +349,19 @@ Released under the [MIT License](LICENSE).
 
 ---
 
-## ⭐ Support the project
+## Support the project
 
-If OpenTune is useful to you:
+If BytesMusic is useful to you:
 
-⭐ Star the repository  
-🐛 Report bugs  
-💡 Suggest features  
-🔧 Submit pull requests  
-📢 Share the project
+- Star the repository
+- Report bugs
+- Suggest features
+- Submit pull requests
+- Share the project
 
 ---
 
 <p align="center">
-  <strong>OpenTune</strong><br>
+  <strong>BytesMusic</strong><br>
   Open music. Your way.
 </p>
