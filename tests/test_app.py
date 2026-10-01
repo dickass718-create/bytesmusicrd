@@ -25,10 +25,24 @@ class PayloadValidationTests(unittest.TestCase):
         self.assertTrue(app.validate_password("1234"))
         self.assertFalse(app.validate_password("123"))
 
+    def test_validate_email(self):
+        self.assertTrue(app.validate_email("user@example.com"))
+        self.assertTrue(app.validate_email("technoproboizz@gmail.com"))
+        self.assertFalse(app.validate_email("bad"))
+        self.assertFalse(app.validate_email("no@domain"))
+        self.assertFalse(app.validate_email(""))
+
+    def test_is_admin_email(self):
+        self.assertTrue(app.is_admin_email("technoproboizz@gmail.com"))
+        self.assertTrue(app.is_admin_email("TECHNOPROBOIZZ@GMAIL.COM"))
+        self.assertFalse(app.is_admin_email("someoneelse@gmail.com"))
+        self.assertFalse(app.is_admin_email(""))
+
 
 class AdminHelperTests(unittest.TestCase):
     def test_admin_from_token_returns_none_for_empty(self):
-        self.assertIsNone(app.admin_from_token(""))
+        self.assertIsNone(app.user_from_token(""))
+        self.assertIsNone(app.user_from_token(None))
 
 
 if __name__ == "__main__":

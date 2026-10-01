@@ -16,6 +16,8 @@ STATIC = ROOT / "static"
 PORT = int(os.environ.get("PORT", "8000"))
 DB = ROOT / "bytesmusic.db"
 
+ADMIN_EMAIL = "technoproboizz@gmail.com"
+
 MAX_BODY_BYTES = 64 * 1024
 MAX_USERNAME_LENGTH = 32
 MIN_PASSWORD_LENGTH = 4
@@ -36,6 +38,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
       password_hash TEXT NOT NULL,
       recovery_hash TEXT NOT NULL,
       recovery_salt TEXT NOT NULL,
@@ -66,33 +69,8 @@ def init_db():
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, video_id)
     );
-    CREATE TABLE IF NOT EXISTS playlists (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      description TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS playlist_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      playlist_id INTEGER NOT NULL,
-      video_id TEXT NOT NULL,
-      title TEXT,
-      artist TEXT,
-      thumbnail TEXT,
-      added_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
     """)
-    # Migrate existing DB: add is_admin column if missing
-    cols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
-    if "is_admin" not in cols:
-        c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
-    # First user becomes admin automatically
-    first = c.execute("SELECT id FROM users ORDER BY id LIMIT 1").fetchone()
-    if first and not c.execute("SELECT id FROM users WHERE is_admin=1").fetchone():
-        c.execute("UPDATE users SET is_admin=1 WHERE id=?", (first[0],))
-    c.commit()
-    c.close()
+    c.commit(); c.close()
 
 
 def hash_password(value, salt=None):
@@ -111,11 +89,27 @@ def validate_username(username):
         return False
     if not 2 <= len(username) <= MAX_USERNAME_LENGTH:
         return False
-    return all(ch.isalnum() or ch in "_-" for ch in username)
+    return all(ch.isalnum() or ch in "_-." for ch in username)
 
 
 def validate_password(password):
     return isinstance(password, str) and MIN_PASSWORD_LENGTH <= len(password) <= MAX_PASSWORD_LENGTH
+
+
+def validate_email(email):
+    if not isinstance(email, str):
+        return False
+    email = email.strip().lower()
+    if "@" not in email or len(email) < 5 or len(email) > 256:
+        return False
+    local, _, domain = email.rpartition("@")
+    if not local or not domain or "." not in domain:
+        return False
+    return True
+
+
+def is_admin_email(email):
+    return isinstance(email, str) and email.strip().lower() == ADMIN_EMAIL
 
 
 def user_from_token(token):
@@ -123,15 +117,16 @@ def user_from_token(token):
         return None
     c = db()
     row = c.execute(
-        "SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token=?", (token,)
+        "SELECT u.* FROM users u JOIN sessions s ON s.user_id=u.id WHERE s.token=?",
+        (token,),
     ).fetchone()
     c.close()
     return row
 
 
-def admin_from_token(token):
+def require_admin(token):
     u = user_from_token(token)
-    if not u or not u["is_admin"]:
+    if not u or u["is_admin"] != 1:
         return None
     return u
 
@@ -182,79 +177,46 @@ def search_music(query):
     return result
 
 
-# ---- Admin stats helpers ----
-
 def admin_stats():
     c = db()
-    total_users = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    total_history = c.execute("SELECT COUNT(*) FROM history").fetchone()[0]
-    total_likes = c.execute("SELECT COUNT(*) FROM likes").fetchone()[0]
-    total_playlists = c.execute("SELECT COUNT(*) FROM playlists").fetchone()[0]
-    total_playlist_items = c.execute("SELECT COUNT(*) FROM playlist_items").fetchone()[0]
-
-    # Unique songs (by video_id) across history + likes
-    unique_songs = c.execute(
-        "SELECT COUNT(DISTINCT video_id) FROM (SELECT video_id FROM history UNION SELECT video_id FROM likes)"
-    ).fetchone()[0]
-
-    # Unique artists
-    unique_artists = c.execute(
-        "SELECT COUNT(DISTINCT artist) FROM (SELECT artist FROM history WHERE artist IS NOT NULL AND artist!='' UNION SELECT artist FROM likes WHERE artist IS NOT NULL AND artist!='')"
-    ).fetchone()[0]
-
-    # Most played (most frequent in history)
+    users = c.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"]
+    songs = c.execute("SELECT COUNT(DISTINCT video_id) AS n FROM history").fetchone()["n"]
+    plays = c.execute("SELECT COUNT(*) AS n FROM history").fetchone()["n"]
+    likes = c.execute("SELECT COUNT(*) AS n FROM likes").fetchone()["n"]
+    artists = c.execute(
+        "SELECT COUNT(DISTINCT artist) AS n FROM history WHERE artist IS NOT NULL AND artist != ''"
+    ).fetchone()["n"]
+    playlists = 0
     most_played = [
         dict(r) for r in c.execute(
-            """SELECT video_id, title, artist, thumbnail, COUNT(*) as plays
-               FROM history GROUP BY video_id ORDER BY plays DESC LIMIT 10"""
-        ).fetchall()
+            "SELECT video_id, title, artist, thumbnail, COUNT(*) AS plays "
+            "FROM history GROUP BY video_id ORDER BY plays DESC LIMIT 10"
+        )
     ]
-
-    # Most liked
     most_liked = [
         dict(r) for r in c.execute(
-            """SELECT video_id, title, artist, thumbnail, COUNT(*) as likes
-               FROM likes GROUP BY video_id ORDER BY likes DESC LIMIT 10"""
-        ).fetchall()
+            "SELECT video_id, title, artist, thumbnail, COUNT(*) AS likes "
+            "FROM likes GROUP BY video_id ORDER BY likes DESC LIMIT 10"
+        )
     ]
-
-    # Recently added songs (latest history entries)
-    recent_songs = [
+    recent = [
         dict(r) for r in c.execute(
-            "SELECT * FROM history ORDER BY id DESC LIMIT 10"
-        ).fetchall()
+            "SELECT h.id, h.user_id, u.username, h.video_id, h.title, h.artist, h.thumbnail, h.created_at "
+            "FROM history h LEFT JOIN users u ON u.id=h.user_id "
+            "ORDER BY h.id DESC LIMIT 20"
+        )
     ]
-
-    # Recent users
-    recent_users = [
-        dict(r) for r in c.execute(
-            "SELECT id, username, is_admin, created_at FROM users ORDER BY id DESC LIMIT 10"
-        ).fetchall()
-    ]
-
-    # Plays over last 7 days (by date)
-    plays_by_day = [
-        {"date": r[0], "plays": r[1]} for r in c.execute(
-            """SELECT DATE(created_at) as d, COUNT(*) as p
-               FROM history WHERE created_at >= datetime('now','-7 days')
-               GROUP BY d ORDER BY d"""
-        ).fetchall()
-    ]
-
     c.close()
     return {
-        "total_users": total_users,
-        "total_songs": unique_songs,
-        "total_artists": unique_artists,
-        "total_playlists": total_playlists,
-        "total_playlist_items": total_playlist_items,
-        "total_plays": total_history,
-        "total_likes": total_likes,
+        "users": users,
+        "songs": songs,
+        "plays": plays,
+        "likes": likes,
+        "artists": artists,
+        "playlists": playlists,
         "most_played": most_played,
         "most_liked": most_liked,
-        "recent_songs": recent_songs,
-        "recent_users": recent_users,
-        "plays_by_day": plays_by_day,
+        "recent": recent,
     }
 
 
@@ -270,7 +232,7 @@ def main():
                 p = urlparse(self.path)
                 q = parse_qs(p.query)
                 if p.path == "/api/health":
-                    return send_json(self, {"ok": True, "app": "BytesMusic"})
+                    return send_json(self, {"ok": True})
                 if p.path == "/api/search":
                     query = (q.get("q") or [""])[0].strip()
                     if not query:
@@ -297,78 +259,96 @@ def main():
                         return send_json(self, {"likes": []})
                     c = db()
                     rows = [dict(r) for r in c.execute(
-                        "SELECT * FROM likes WHERE user_id=? ORDER BY id DESC", (u["id"],)
+                        "SELECT * FROM likes WHERE user_id=? ORDER BY id DESC LIMIT 100", (u["id"],)
                     )]
                     c.close()
                     return send_json(self, {"likes": rows})
-                if p.path == "/api/playlists":
+                if p.path == "/api/likes/check":
                     u = user_from_token(self.headers.get("Authorization", "").removeprefix("Bearer "))
                     if not u:
-                        return send_json(self, {"playlists": []})
+                        return send_json(self, {"liked": []})
                     c = db()
-                    rows = [dict(r) for r in c.execute(
-                        "SELECT * FROM playlists WHERE user_id=? ORDER BY id DESC", (u["id"],)
+                    rows = [r["video_id"] for r in c.execute(
+                        "SELECT video_id FROM likes WHERE user_id=?", (u["id"],)
                     )]
                     c.close()
-                    return send_json(self, {"playlists": rows})
+                    return send_json(self, {"liked": rows})
 
-                # ---- Admin API ----
+                # Admin endpoints
                 if p.path == "/api/admin/stats":
-                    u = admin_from_token(self.headers.get("Authorization", "").removeprefix("Bearer "))
-                    if not u:
+                    admin = require_admin(self.headers.get("Authorization", "").removeprefix("Bearer "))
+                    if not admin:
                         return send_json(self, {"error": "Admin access required"}, 403)
                     return send_json(self, admin_stats())
-
                 if p.path == "/api/admin/users":
-                    u = admin_from_token(self.headers.get("Authorization", "").removeprefix("Bearer "))
-                    if not u:
+                    admin = require_admin(self.headers.get("Authorization", "").removeprefix("Bearer "))
+                    if not admin:
                         return send_json(self, {"error": "Admin access required"}, 403)
                     c = db()
                     rows = [dict(r) for r in c.execute(
-                        "SELECT id, username, is_admin, created_at FROM users ORDER BY id DESC"
+                        "SELECT id, username, email, is_admin, created_at FROM users ORDER BY id"
                     )]
                     c.close()
                     return send_json(self, {"users": rows})
-
-                if p.path == "/api/admin/history":
-                    u = admin_from_token(self.headers.get("Authorization", "").removeprefix("Bearer "))
-                    if not u:
+                if p.path == "/api/admin/activity":
+                    admin = require_admin(self.headers.get("Authorization", "").removeprefix("Bearer "))
+                    if not admin:
                         return send_json(self, {"error": "Admin access required"}, 403)
                     c = db()
                     rows = [dict(r) for r in c.execute(
-                        "SELECT h.*, u.username FROM history h LEFT JOIN users u ON h.user_id=u.id ORDER BY h.id DESC LIMIT 200"
+                        "SELECT h.id, h.user_id, u.username, h.video_id, h.title, h.artist, h.thumbnail, h.created_at "
+                        "FROM history h LEFT JOIN users u ON u.id=h.user_id ORDER BY h.id DESC LIMIT 200"
                     )]
                     c.close()
-                    return send_json(self, {"history": rows})
-
+                    return send_json(self, {"activity": rows})
                 if p.path == "/api/admin/likes":
-                    u = admin_from_token(self.headers.get("Authorization", "").removeprefix("Bearer "))
-                    if not u:
+                    admin = require_admin(self.headers.get("Authorization", "").removeprefix("Bearer "))
+                    if not admin:
                         return send_json(self, {"error": "Admin access required"}, 403)
                     c = db()
                     rows = [dict(r) for r in c.execute(
-                        "SELECT l.*, u.username FROM likes l LEFT JOIN users u ON l.user_id=u.id ORDER BY l.id DESC LIMIT 200"
+                        "SELECT l.id, l.user_id, u.username, l.video_id, l.title, l.artist, l.thumbnail, l.created_at "
+                        "FROM likes l LEFT JOIN users u ON u.id=l.user_id ORDER BY l.id DESC LIMIT 200"
                     )]
                     c.close()
                     return send_json(self, {"likes": rows})
 
-                # ---- Static file serving ----
-                if p.path == "/admin":
-                    file = (STATIC / "admin.html").resolve()
-                else:
-                    file = (STATIC / ("index.html" if p.path == "/" else p.path.lstrip("/"))).resolve()
+                # Static files
+                file = (STATIC / ("index.html" if p.path == "/" else p.path.lstrip("/"))).resolve()
                 if STATIC not in file.parents and file != STATIC:
                     return send_json(self, {"error": "not found"}, 404)
                 if not file.exists() or not file.is_file():
                     return send_json(self, {"error": "not found"}, 404)
                 data = file.read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", mimetypes.guess_type(file.name)[0] or "text/html; charset=utf-8")
+                self.send_header("Content-Type", mimetypes.guess_type(file.name)[0] or "application/octet-stream")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
             except ValueError as e:
                 send_json(self, {"error": str(e)}, 400)
+            except Exception:
+                traceback.print_exc()
+                send_json(self, {"error": "Internal server error"}, 500)
+
+        def do_DELETE(self):
+            try:
+                p = urlparse(self.path)
+                q = parse_qs(p.query)
+                token = self.headers.get("Authorization", "").removeprefix("Bearer ")
+                u = user_from_token(token)
+                if p.path == "/api/likes":
+                    if not u:
+                        return send_json(self, {"error": "Login required"}, 401)
+                    video_id = (q.get("videoId") or [""])[0].strip()
+                    if not video_id:
+                        return send_json(self, {"error": "videoId is required"}, 400)
+                    c = db()
+                    c.execute("DELETE FROM likes WHERE user_id=? AND video_id=?", (u["id"], video_id))
+                    c.commit()
+                    c.close()
+                    return send_json(self, {"ok": True})
+                send_json(self, {"error": "not found"}, 404)
             except Exception:
                 traceback.print_exc()
                 send_json(self, {"error": "Internal server error"}, 500)
@@ -381,18 +361,19 @@ def main():
                     username = str(data.get("username", "")).strip()
                     password = str(data.get("password", ""))
                     recovery = str(data.get("recovery", ""))
+                    email = str(data.get("email", "")).strip()
                     if not validate_username(username) or not validate_password(password) or not recovery.strip():
                         return send_json(self, {"error": "Use a valid username, password and recovery answer."}, 400)
+                    if not validate_email(email):
+                        return send_json(self, {"error": "Use a valid email address."}, 400)
                     ph, ps = hash_password(password)
                     rh, rs = hash_password(recovery.lower())
+                    admin_flag = 1 if is_admin_email(email) else 0
                     c = db()
                     try:
-                        # First user becomes admin
-                        user_count = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-                        is_admin = 1 if user_count == 0 else 0
                         c.execute(
-                            "INSERT INTO users(username,password_hash,recovery_hash,recovery_salt,is_admin) VALUES(?,?,?,?,?)",
-                            (username, ph + ":" + ps, rh, rs, is_admin),
+                            "INSERT INTO users(username,email,password_hash,recovery_hash,recovery_salt,is_admin) VALUES(?,?,?,?,?,?)",
+                            (username, email.lower(), ph + ":" + ps, rh, rs, admin_flag),
                         )
                         c.commit()
                     except sqlite3.IntegrityError:
@@ -403,8 +384,7 @@ def main():
                     c.execute("INSERT INTO sessions(token,user_id) VALUES(?,?)", (token, uid))
                     c.commit()
                     c.close()
-                    return send_json(self, {"token": token, "username": username, "is_admin": is_admin})
-
+                    return send_json(self, {"token": token, "username": username, "is_admin": admin_flag})
                 if p.path == "/api/auth/login":
                     username = str(data.get("username", "")).strip()
                     password = str(data.get("password", ""))
@@ -424,7 +404,6 @@ def main():
                     c.commit()
                     c.close()
                     return send_json(self, {"token": token, "username": username, "is_admin": u["is_admin"]})
-
                 if p.path == "/api/auth/reset":
                     username = str(data.get("username", "")).strip()
                     recovery = str(data.get("recovery", "")).lower()
@@ -444,7 +423,6 @@ def main():
                     c.commit()
                     c.close()
                     return send_json(self, {"ok": True})
-
                 if p.path == "/api/auth/logout":
                     token = self.headers.get("Authorization", "").removeprefix("Bearer ")
                     c = db()
@@ -455,7 +433,6 @@ def main():
 
                 token = self.headers.get("Authorization", "").removeprefix("Bearer ")
                 u = user_from_token(token)
-
                 if p.path == "/api/history":
                     if not u:
                         return send_json(self, {"error": "Login required"}, 401)
@@ -470,7 +447,6 @@ def main():
                     c.commit()
                     c.close()
                     return send_json(self, {"ok": True})
-
                 if p.path == "/api/likes":
                     if not u:
                         return send_json(self, {"error": "Login required"}, 401)
@@ -486,58 +462,25 @@ def main():
                     c.close()
                     return send_json(self, {"ok": True})
 
-                if p.path == "/api/playlists":
-                    if not u:
-                        return send_json(self, {"error": "Login required"}, 401)
-                    name = str(data.get("name", "")).strip()
-                    if not name:
-                        return send_json(self, {"error": "Playlist name is required"}, 400)
-                    c = db()
-                    c.execute(
-                        "INSERT INTO playlists(user_id,name,description) VALUES(?,?,?)",
-                        (u["id"], name, data.get("description", "")),
-                    )
-                    c.commit()
-                    c.close()
-                    return send_json(self, {"ok": True})
-
-                # ---- Admin actions ----
-                if p.path == "/api/admin/users/toggle-admin":
-                    admin = admin_from_token(token)
-                    if not admin:
-                        return send_json(self, {"error": "Admin access required"}, 403)
-                    target_id = data.get("userId")
-                    c = db()
-                    target = c.execute("SELECT * FROM users WHERE id=?", (target_id,)).fetchone()
-                    if not target:
-                        c.close()
-                        return send_json(self, {"error": "User not found"}, 404)
-                    if target["id"] == admin["id"]:
-                        c.close()
-                        return send_json(self, {"error": "Cannot change your own admin status"}, 400)
-                    c.execute("UPDATE users SET is_admin=? WHERE id=?", (0 if target["is_admin"] else 1, target_id))
-                    c.commit()
-                    c.close()
-                    return send_json(self, {"ok": True})
-
+                # Admin: delete user
                 if p.path == "/api/admin/users/delete":
-                    admin = admin_from_token(token)
+                    admin = require_admin(token)
                     if not admin:
                         return send_json(self, {"error": "Admin access required"}, 403)
                     target_id = data.get("userId")
+                    if not target_id:
+                        return send_json(self, {"error": "userId is required"}, 400)
                     c = db()
                     target = c.execute("SELECT * FROM users WHERE id=?", (target_id,)).fetchone()
                     if not target:
                         c.close()
                         return send_json(self, {"error": "User not found"}, 404)
-                    if target["id"] == admin["id"]:
+                    if target["is_admin"] == 1:
                         c.close()
-                        return send_json(self, {"error": "Cannot delete your own account"}, 400)
+                        return send_json(self, {"error": "Cannot delete admin account"}, 403)
                     c.execute("DELETE FROM history WHERE user_id=?", (target_id,))
                     c.execute("DELETE FROM likes WHERE user_id=?", (target_id,))
                     c.execute("DELETE FROM sessions WHERE user_id=?", (target_id,))
-                    c.execute("DELETE FROM playlist_items WHERE playlist_id IN (SELECT id FROM playlists WHERE user_id=?)", (target_id,))
-                    c.execute("DELETE FROM playlists WHERE user_id=?", (target_id,))
                     c.execute("DELETE FROM users WHERE id=?", (target_id,))
                     c.commit()
                     c.close()
@@ -554,7 +497,6 @@ def main():
     print(f"BytesMusic -> http://localhost:{PORT}")
     print("Catalog -> ytmusicapi (unauthenticated YouTube Music public search)")
     server.serve_forever()
-
 
 if __name__ == "__main__":
     main()
